@@ -1,0 +1,44 @@
+name: ib_interview_flow
+turns:
+  # Wait for the bot's greeting before speaking
+  - expect:
+      - event: response
+        eval: >
+          the bot introduces itself as an investment banking interviewer and
+          explains the interview format (mix of technical and behavioral questions)
+
+  # Candidate gives a greeting
+  - user: "Hi, I'm ready to start."
+    expect:
+      - event: response
+        eval: >
+          the bot asks the first interview question, which should be either a
+          technical question about finance (DCF, valuation, accounting) or a
+          behavioral question (why banking, walk me through resume)
+
+  # Candidate answers the first question
+  - user: "For the depreciation question, a 10 dollar increase in depreciation reduces EBIT by 10 dollars, which reduces taxable income by 10. With a 21 percent tax rate, taxes go down by 2.10. On the cash flow statement, net income drops by 7.90 but you add back the 10 in depreciation, so cash increases by 2.10. On the balance sheet, accumulated depreciation goes up by 10, retained earnings drops by 7.90, and cash goes up by 2.10."
+    expect:
+      - event: response
+        eval: >
+          the bot acknowledges the answer and either asks a follow-up question
+          to go deeper on the topic OR moves to the next question. The response
+          should stay in character as an IB interviewer.
+
+  # Candidate answers the follow-up or next question
+  - user: "WACC is the weighted average cost of capital. It combines the cost of equity and the after-tax cost of debt, weighted by their proportions in the capital structure. You use it as the discount rate in a DCF to calculate the present value of unlevered free cash flows. It reflects the overall risk of the business and how it's financed."
+    expect:
+      - event: response
+        eval: >
+          the bot provides feedback on the answer and asks another question.
+          The response should be professional and stay in interviewer character.
+
+  # Final exchange - candidate indicates they're done
+  - user: "I think that covers the main areas I wanted to practice."
+    expect:
+      - event: response
+        eval: >
+          the bot wraps up the interview session by providing constructive
+          feedback on the candidate's performance, mentioning strengths and
+          areas to improve. The bot should stay in character as an IB interviewer
+          and end the session professionally.
