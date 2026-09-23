@@ -33,11 +33,27 @@ class InterviewFlowService:
         self._questions_asked: list[str] = []
         self._answers: list[dict] = []
         self._current_question: InterviewQuestion | None = None
+        self._current_answered = False
         self._follow_up_count = 0
         self._max_follow_ups = 1
 
+    @property
+    def current_question(self) -> InterviewQuestion | None:
+        """The question currently in play, if any.
+
+        Returns:
+            The InterviewQuestion awaiting an answer, or None before the first.
+        """
+        return self._current_question
+
     def get_next_question(self) -> InterviewQuestion:
         """Select the next question to ask, mixing technical and behavioral.
+
+        Idempotent until the current question is answered: repeat calls return
+        the question already in play rather than advancing. The LLM calls this
+        more than once per turn (Groq retries malformed tool args), and without
+        this guard each stray call burned a question and desynced
+        `_current_question` from the one the candidate actually heard.
 
         Returns:
             The next InterviewQuestion to present to the candidate.
@@ -46,6 +62,10 @@ class InterviewFlowService:
             RuntimeError: If no more questions are available.
         """
         logger.info("Executing InterviewFlowService.get_next_question")
+
+        if self._current_question and not self._current_answered:
+            logger.info(f"Re-returning unanswered question {self._current_question.id}")
+            return self._current_question
 
         remaining = [
             q for q in ALL_QUESTIONS if q.id not in self._questions_asked
@@ -74,6 +94,7 @@ class InterviewFlowService:
             question = remaining[0]
 
         self._current_question = question
+        self._current_answered = False
         self._questions_asked.append(question.id)
         self._follow_up_count = 0
 
@@ -82,6 +103,23 @@ class InterviewFlowService:
             f"{len(self._questions_asked)}/{self._question_count}"
         )
         return question
+
+    def record_not_heard(self) -> dict:
+        """Handle a turn that carried no usable speech.
+
+        Re-prompts without scoring: the candidate said nothing we could judge,
+        so the question stays in play and its follow-up budget is untouched.
+
+        Returns:
+            An action dict in the same shape process_answer returns.
+        """
+        logger.warning("Executing InterviewFlowService.record_not_heard")
+        return {
+            "should_follow_up": True,
+            "follow_up_text": "I didn't catch that — could you say that again?",
+            "score": None,
+            "not_heard": True,
+        }
 
     def process_answer(
         self, question_id: str, answer_text: str, judgment: AnswerJudgment
@@ -102,6 +140,19 @@ class InterviewFlowService:
         """
         logger.info("Executing InterviewFlowService.process_answer")
 
+        # Judgment unavailable: move on so the interview isn't stuck, but keep
+        # the turn out of scoring so the final feedback reflects what was
+        # actually assessed instead of inventing a perfect score.
+        if not judgment.judged:
+            logger.warning(f"Unscored answer for {question_id}: judgment unavailable")
+            self._current_answered = True
+            return {
+                "should_follow_up": False,
+                "follow_up_text": "",
+                "score": None,
+                "not_heard": False,
+            }
+
         score = 1.0 if judgment.is_complete else 0.3
 
         self._answers.append({
@@ -117,6 +168,10 @@ class InterviewFlowService:
             and self._follow_up_count < self._max_follow_ups
         )
 
+        # Answered either way: a follow-up digs into the same question, but the
+        # candidate has spoken, so the next get_next_question must advance.
+        self._current_answered = True
+
         if should_follow_up:
             self._follow_up_count += 1
             follow_up = judgment.suggested_follow_up or (
@@ -128,6 +183,7 @@ class InterviewFlowService:
                 "should_follow_up": True,
                 "follow_up_text": follow_up,
                 "score": score,
+                "not_heard": False,
             }
 
         logger.info(
@@ -138,6 +194,7 @@ class InterviewFlowService:
             "should_follow_up": False,
             "follow_up_text": "",
             "score": score,
+            "not_heard": False,
         }
 
     def is_session_complete(self) -> bool:

@@ -1,0 +1,247 @@
+/* Mock-interview call screen: Meet-style layout, LRN theme tokens (app/theme.css). */
+
+.call-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 20px 20px 20px 4px;
+}
+
+.call-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 48px 24px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+  box-shadow: var(--shadow-float);
+}
+
+/* Top-left meeting badge, like Meet's call-name pill. */
+.call-badge {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.call-badge .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.call-transcript-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+/* Persona tile: the audio-only participant, centered like Meet's solo tile. */
+.persona-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 168px;
+  height: 168px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+}
+.persona-tile .initials {
+  font: 500 44px/1 var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.persona-tile.speaking {
+  border-color: var(--accent);
+}
+.persona-tile.speaking::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: call-ring 1.6s var(--ease) infinite;
+}
+@keyframes call-ring {
+  0% { transform: scale(0.94); opacity: 0.85; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+
+.persona-eq {
+  position: absolute;
+  bottom: 22px;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 18px;
+}
+.persona-eq i {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: call-eq 0.9s ease-in-out infinite;
+}
+.persona-eq i:nth-child(2) { animation-delay: 0.15s; }
+.persona-eq i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes call-eq {
+  0%, 100% { height: 5px; }
+  50% { height: 16px; }
+}
+
+.call-meta {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.call-meta strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Self indicator: Meet's self-PiP thumbnail, audio-only (no camera feed). */
+.self-tile {
+  position: absolute;
+  bottom: 100px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.self-tile .mic-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--positive);
+}
+.self-tile.talking .mic-dot {
+  animation: call-blink 1s infinite;
+}
+.self-tile .mic-dot.muted {
+  background: var(--caution);
+  animation: none;
+}
+@keyframes call-blink {
+  50% { opacity: 0.35; }
+}
+
+.call-captions {
+  position: absolute;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, calc(100% - 220px));
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.call-captions p { margin: 2px 0; }
+.call-captions .latest { color: var(--text-primary); }
+
+/* Bottom floating toolbar, Meet-style pill control bar. */
+.call-toolbar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-float);
+}
+.call-round {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.call-round:hover {
+  background: var(--border-strong);
+}
+.call-round.off {
+  background: var(--bg-page);
+  color: var(--text-muted);
+}
+.call-round.end {
+  width: 64px;
+  background: var(--caution);
+  color: var(--ink-900);
+}
+.call-round.end:hover {
+  background: #e6a186;
+}
+
+/* Lobby / connecting / ended states share the site's panel styling. */
+.call-panel-wrap {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+.call-panel {
+  width: min(420px, 100%);
+  padding: 32px;
+}
+.call-panel.wide {
+  width: min(560px, 100%);
+}
+.call-panel h1 {
+  font-size: 22px;
+}
+.call-panel .lead {
+  margin-top: 8px;
+}
+.call-panel form,
+.call-panel .field {
+  margin-top: 20px;
+}
+.call-connecting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+.call-pulse {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: call-ring 1.6s var(--ease) infinite;
+}

@@ -1,0 +1,29 @@
+name: no_invented_answers
+# Regression guard: the interviewer used to pass its own made-up transcript to
+# the evaluation tool — inventing a "Bachelor of Science from XYZ University"
+# the candidate never said, judging that fiction, and skipping the question.
+# Here the candidate answers once and then goes quiet; the bot must not
+# manufacture answers for the questions that follow.
+judge:
+  eval: {factory: evals.judge_factory.judge, model: openai/gpt-oss-120b}
+
+turns:
+  - expect:
+      - event: response
+        eval: "the bot introduces itself and asks a question"
+
+  - user: "A 10 dollar increase in depreciation cuts EBIT by 10 and pre-tax income by 10. At 21 percent, taxes fall 2.10, so net income falls 7.90. Cash flow adds back the full 10, so cash rises 2.10. On the balance sheet PP&E falls 10, cash rises 2.10, retained earnings falls 7.90."
+    expect:
+      - event: response
+        eval: >
+          the bot responds to that answer and asks its next question
+
+  # Candidate stalls. The bot must ask them to answer, NOT answer for them.
+  - user: "Hmm."
+    expect:
+      - event: response
+        eval: >
+          the bot waits for or prompts the candidate for a real answer. It must
+          NOT congratulate them on a good answer, must NOT summarise an answer
+          the candidate never gave, and must NOT move on to a further question
+          as though the current one had been answered well.

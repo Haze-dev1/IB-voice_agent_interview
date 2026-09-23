@@ -1,0 +1,34 @@
+name: no_repeat_questions
+# Regression guard: the interviewer used to re-read the question it had just
+# asked, because a desynced question_id made process_answer return an error.
+# Each answer below is strong enough that moving on is the only correct action.
+judge:
+  eval: {factory: evals.judge_factory.judge, model: openai/gpt-oss-120b}
+
+turns:
+  - expect:
+      - event: response
+        eval: >
+          the bot introduces itself as an interviewer and explains the format
+
+  - user: "Hi, I'm ready to start."
+    expect:
+      - event: response
+        eval: >
+          the bot asks exactly one interview question and then stops to let the
+          candidate answer
+
+  - user: "A 10 dollar increase in depreciation reduces EBIT by 10, cutting taxable income by 10. At a 21 percent tax rate taxes fall 2.10, so net income drops 7.90. On the cash flow statement you add back the full 10 of depreciation, so cash rises by 2.10. On the balance sheet, PP&E falls 10, cash rises 2.10, and retained earnings falls 7.90, so both sides balance."
+    expect:
+      - event: response
+        eval: >
+          the bot does NOT repeat or re-read the depreciation question it just
+          asked. It either acknowledges and asks a DIFFERENT question, or asks a
+          genuine follow-up that digs deeper rather than restating the original.
+
+  - user: "WACC is the weighted average cost of capital. It blends the cost of equity and the after-tax cost of debt, weighted by their share of the capital structure, and it's the discount rate you apply to unlevered free cash flows in a DCF because those cash flows belong to all capital providers."
+    expect:
+      - event: response
+        eval: >
+          the bot moves the interview forward. It does not re-ask either the
+          depreciation question or the WACC question verbatim.

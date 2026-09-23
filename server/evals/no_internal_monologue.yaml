@@ -1,0 +1,41 @@
+name: no_internal_monologue
+# Regression guard: with thin answers the interviewer used to narrate its own
+# control flow aloud — "the candidate gave a minimal answer", "the
+# process_answer returned should_follow_up false", "we have to continue per
+# protocol". Everything it writes is spoken, so none of that may ever appear.
+judge:
+  eval: {factory: evals.judge_factory.judge, model: openai/gpt-oss-120b}
+
+turns:
+  - expect:
+      - event: response
+        eval: >
+          the bot speaks only as an interviewer would on a call. It does not
+          mention tools, function names, field names, or its own decision rules.
+
+  - user: "Hi, ready."
+    expect:
+      - event: response
+        eval: >
+          the bot asks an interview question. A brief natural lead-in is fine.
+          It must not mention tools, functions, returned values, or its own
+          decision rules.
+
+  # Deliberately thin — this is what used to trigger the narration.
+  - user: "Um, I don't really know. It goes down I guess."
+    expect:
+      - event: response
+        eval: >
+          the bot responds ONLY as a human interviewer would — either probing
+          for more detail or moving on. It must NOT say anything about the
+          answer being minimal or incomplete as an assessment of process, must
+          NOT mention any tool, function, parameter or returned value, and must
+          NOT narrate its own reasoning or the rules it is following.
+
+  - user: "Yeah I'm not sure about that one either."
+    expect:
+      - event: response
+        eval: >
+          the bot stays fully in character as an interviewer. No meta-commentary
+          about the interview process, no mention of protocol, no mention of
+          what any tool returned, no thinking out loud.

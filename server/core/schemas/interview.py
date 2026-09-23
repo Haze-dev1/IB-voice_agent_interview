@@ -44,6 +44,10 @@ class AnswerJudgment(BaseModel):
     is_complete: bool = Field(description="Whether the answer covers enough to move on")
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence in the judgment")
     suggested_follow_up: str = Field(default="", description="Follow-up if answer is thin")
+    judged: bool = Field(
+        default=True,
+        description="False when judgment was unavailable; the other fields are then meaningless",
+    )
 
 
 class InterviewFeedback(BaseModel):

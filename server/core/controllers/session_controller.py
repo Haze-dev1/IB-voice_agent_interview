@@ -18,6 +18,7 @@ from core.services.interview_flow import InterviewFlowService
 from core.services.typesafe_judgment import judge_answer
 
 
+
 class SessionController:
     """Orchestrates interview sessions and coordinates services.
 
@@ -30,19 +31,21 @@ class SessionController:
         self._sessions: dict[str, InterviewFlowService] = {}
 
     async def create_session(
-        self, request: SessionConnectRequest
+        self, request: SessionConnectRequest, session_id: str | None = None
     ) -> SessionConnectResponse:
         """Create a new interview session.
 
         Args:
             request: Session creation payload.
+            session_id: Key to store the session under. Defaults to a new UUID;
+                the bot passes a fixed key since it serves one session.
 
         Returns:
             SessionConnectResponse with session details.
         """
         logger.info("Executing SessionController.create_session")
 
-        session_id = str(uuid.uuid4())
+        session_id = session_id or str(uuid.uuid4())
         flow_service = InterviewFlowService(question_count=request.question_count)
         self._sessions[session_id] = flow_service
 
@@ -64,21 +67,21 @@ class SessionController:
         """
         return self._sessions.get(session_id)
 
-    async def process_answer(
-        self, session_id: str, question_id: str, answer_text: str
-    ) -> dict:
+    async def process_answer(self, session_id: str, answer_text: str) -> dict:
         """Process a candidate's answer through TypeSafe judgment.
+
+        The answer is always attributed to the question the flow service has in
+        play, so the caller never has to track question identity.
 
         Args:
             session_id: The session identifier.
-            question_id: The question that was answered.
             answer_text: The candidate's transcribed answer.
 
         Returns:
-            Dict with judgment results and next action.
+            Dict with the next action and whether the session is complete.
 
         Raises:
-            ValueError: If session or question is not found.
+            ValueError: If the session has no question in play.
         """
         logger.info(f"Executing SessionController.process_answer for session {session_id}")
 
@@ -86,25 +89,33 @@ class SessionController:
         if not flow_service:
             raise ValueError(f"Session {session_id} not found")
 
-        current_question = flow_service._current_question
-        if not current_question or current_question.id != question_id:
-            raise ValueError(f"Question {question_id} is not the current question")
+        # The question in play is ours to know, not the LLM's to remember. It
+        # used to have to echo back the exact question_id; a stale one raised
+        # and the LLM's recovery was to re-ask the question verbatim.
+        current_question = flow_service.current_question
+        if not current_question:
+            raise ValueError("No question is currently in play")
 
-        judgment = await judge_answer(
-            question=current_question.text,
-            answer=answer_text,
-            key_points=current_question.key_points,
-        )
-
-        result = flow_service.process_answer(
-            question_id=question_id,
-            answer_text=answer_text,
-            judgment=judgment,
-        )
+        # Only a genuinely empty transcript means we heard nothing. A short
+        # answer is still an answer — "I don't know" is a real response and
+        # belongs in front of the judge, not treated as a dropped mic.
+        if not answer_text.strip():
+            logger.warning(f"Empty transcript for {current_question.id}; re-prompting")
+            action = flow_service.record_not_heard()
+        else:
+            judgment = await judge_answer(
+                question=current_question.text,
+                answer=answer_text,
+                key_points=current_question.key_points,
+            )
+            action = flow_service.process_answer(
+                question_id=current_question.id,
+                answer_text=answer_text,
+                judgment=judgment,
+            )
 
         return {
-            "judgment": judgment.model_dump(),
-            "action": result,
+            "action": action,
             "session_complete": flow_service.is_session_complete(),
         }
 
